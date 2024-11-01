@@ -1,5 +1,25 @@
 # create-cloudflare
 
+## 2.31.2
+
+### Patch Changes
+
+- [#7146](https://github.com/cloudflare/workers-sdk/pull/7146) [`d31a902`](https://github.com/cloudflare/workers-sdk/commit/d31a9021681b0d053bd441826849510dc97c5321) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency | From   | To     |
+  | ---------- | ------ | ------ |
+  | create-vue | 3.11.1 | 3.11.2 |
+
+- [#7148](https://github.com/cloudflare/workers-sdk/pull/7148) [`f46330a`](https://github.com/cloudflare/workers-sdk/commit/f46330a4dc8b6a21b0dc629682148e0ed399e8ae) Thanks [@dependabot](https://github.com/apps/dependabot)! - chore: update dependencies of "create-cloudflare" package
+
+  The following dependency versions have been updated:
+
+  | Dependency | From   | To     |
+  | ---------- | ------ | ------ |
+  | nuxi       | 3.12.0 | 3.15.0 |
+
 ## 2.31.1
 
 ### Patch Changes
