@@ -23,6 +23,7 @@ import {
 	usingLocalBucket,
 } from "./helpers";
 import * as Notification from "./notification";
+import * as PublicDevUrl from "./public-dev-url";
 import * as Sippy from "./sippy";
 import type { CommonYargsArgv, SubHelp } from "../yargs-types";
 import type { R2PutOptions } from "@cloudflare/workers-types/experimental";
@@ -604,6 +605,32 @@ export function r2(r2Yargs: CommonYargsArgv, subHelp: SubHelp) {
 							"Delete an event notification rule from an R2 bucket",
 							Notification.DeleteOptions,
 							Notification.DeleteHandler
+						);
+				}
+			);
+
+			r2BucketYargs.command(
+				"dev-url",
+				"Manage public access via the r2.dev URL for an R2 bucket",
+				(domainYargs) => {
+					return domainYargs
+						.command(
+							"enable <bucket>",
+							"Enable public access via the r2.dev URL for an R2 bucket",
+							PublicDevUrl.EnableOptions,
+							PublicDevUrl.EnableHandler
+						)
+						.command(
+							"disable <bucket>",
+							"Disable public access via the r2.dev URL for an R2 bucket",
+							PublicDevUrl.DisableOptions,
+							PublicDevUrl.DisableHandler
+						)
+						.command(
+							"get <bucket>",
+							"Get the r2.dev URL and status for an R2 bucket",
+							PublicDevUrl.GetOptions,
+							PublicDevUrl.GetHandler
 						);
 				}
 			);

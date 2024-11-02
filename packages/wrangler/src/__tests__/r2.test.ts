@@ -5,6 +5,7 @@ import { actionsForEventCategories } from "../r2/helpers";
 import { endEventLoop } from "./helpers/end-event-loop";
 import { mockAccountId, mockApiToken } from "./helpers/mock-account-id";
 import { mockConsoleMethods } from "./helpers/mock-console";
+import { mockConfirm } from "./helpers/mock-dialogs";
 import { useMockIsTTY } from "./helpers/mock-istty";
 import { createFetchResult, msw, mswR2handlers } from "./helpers/msw";
 import { runInTempDir } from "./helpers/run-in-tmp";
@@ -97,6 +98,7 @@ describe("r2", () => {
 				  wrangler r2 bucket delete <name>  Delete an R2 bucket
 				  wrangler r2 bucket sippy          Manage Sippy incremental migration on an R2 bucket
 				  wrangler r2 bucket notification   Manage event notification rules for an R2 bucket
+				  wrangler r2 bucket dev-url        Manage public access via the r2.dev URL for an R2 bucket
 
 				GLOBAL FLAGS
 				  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
@@ -131,6 +133,7 @@ describe("r2", () => {
 				  wrangler r2 bucket delete <name>  Delete an R2 bucket
 				  wrangler r2 bucket sippy          Manage Sippy incremental migration on an R2 bucket
 				  wrangler r2 bucket notification   Manage event notification rules for an R2 bucket
+				  wrangler r2 bucket dev-url        Manage public access via the r2.dev URL for an R2 bucket
 
 				GLOBAL FLAGS
 				  -j, --experimental-json-config  Experimental: support wrangler.json  [boolean]
@@ -1464,6 +1467,139 @@ describe("r2", () => {
 						  -J, --jurisdiction  The jurisdiction where the bucket exists  [string]"
 
 					`);
+				});
+			});
+		});
+
+		describe("dev-url", () => {
+			const { setIsTTY } = useMockIsTTY();
+			mockAccountId();
+			mockApiToken();
+			describe("get", () => {
+				it("should retrieve the r2.dev URL of a bucket when public access is enabled", async () => {
+					const bucketName = "my-bucket";
+					const domainInfo = {
+						bucketId: "bucket-id-123",
+						domain: "pub-bucket-id-123.r2.dev",
+						enabled: true,
+					};
+					msw.use(
+						http.get(
+							"*/accounts/:accountId/r2/buckets/:bucketName/domains/managed",
+							async ({ params }) => {
+								const { accountId, bucketName: bucketParam } = params;
+								expect(accountId).toEqual("some-account-id");
+								expect(bucketParam).toEqual(bucketName);
+								return HttpResponse.json(createFetchResult({ ...domainInfo }));
+							},
+							{ once: true }
+						)
+					);
+					await runWrangler(`r2 bucket dev-url get ${bucketName}`);
+					expect(std.out).toMatchInlineSnapshot(`
+				"Public access is enabled at 'https://pub-bucket-id-123.r2.dev'."
+			  `);
+				});
+
+				it("should show that public access is disabled when it is disabled", async () => {
+					const bucketName = "my-bucket";
+					const domainInfo = {
+						bucketId: "bucket-id-123",
+						domain: "pub-bucket-id-123.r2.dev",
+						enabled: false,
+					};
+					msw.use(
+						http.get(
+							"*/accounts/:accountId/r2/buckets/:bucketName/domains/managed",
+							async ({ params }) => {
+								const { accountId, bucketName: bucketParam } = params;
+								expect(accountId).toEqual("some-account-id");
+								expect(bucketParam).toEqual(bucketName);
+								return HttpResponse.json(createFetchResult({ ...domainInfo }));
+							},
+							{ once: true }
+						)
+					);
+					await runWrangler(`r2 bucket dev-url get ${bucketName}`);
+					expect(std.out).toMatchInlineSnapshot(`
+				"Public access via the r2.dev URL is disabled."
+			  `);
+				});
+			});
+
+			describe("enable", () => {
+				it("should enable public access", async () => {
+					const bucketName = "my-bucket";
+					const domainInfo = {
+						bucketId: "bucket-id-123",
+						domain: "pub-bucket-id-123.r2.dev",
+						enabled: true,
+					};
+
+					setIsTTY(true);
+					mockConfirm({
+						text:
+							`Are you sure you enable public access for bucket '${bucketName}'? ` +
+							`The contents of your bucket will be made publicly available at its r2.dev URL`,
+						result: true,
+					});
+					msw.use(
+						http.put(
+							"*/accounts/:accountId/r2/buckets/:bucketName/domains/managed",
+							async ({ request, params }) => {
+								const { accountId, bucketName: bucketParam } = params;
+								expect(accountId).toEqual("some-account-id");
+								expect(bucketParam).toEqual(bucketName);
+								const requestBody = await request.json();
+								expect(requestBody).toEqual({ enabled: true });
+								return HttpResponse.json(createFetchResult({ ...domainInfo }));
+							},
+							{ once: true }
+						)
+					);
+					await runWrangler(`r2 bucket dev-url enable ${bucketName}`);
+					expect(std.out).toMatchInlineSnapshot(`
+				"Enabling public access for bucket 'my-bucket'...
+				✨ Public access enabled at 'https://pub-bucket-id-123.r2.dev'."
+			  `);
+				});
+			});
+
+			describe("disable", () => {
+				it("should disable public access", async () => {
+					const bucketName = "my-bucket";
+					const domainInfo = {
+						bucketId: "bucket-id-123",
+						domain: "pub-bucket-id-123.r2.dev",
+						enabled: false,
+					};
+
+					setIsTTY(true);
+					mockConfirm({
+						text:
+							`Are you sure you disable public access for bucket '${bucketName}'? ` +
+							`The contents of your bucket will no longer be publicly available at its r2.dev URL`,
+						result: true,
+					});
+					msw.use(
+						http.put(
+							"*/accounts/:accountId/r2/buckets/:bucketName/domains/managed",
+							async ({ request, params }) => {
+								const { accountId, bucketName: bucketParam } = params;
+								expect(accountId).toEqual("some-account-id");
+								expect(bucketParam).toEqual(bucketName);
+								const requestBody = await request.json();
+								expect(requestBody).toEqual({ enabled: false });
+								return HttpResponse.json(createFetchResult({ ...domainInfo }));
+							},
+							{ once: true }
+						)
+					);
+					await runWrangler(`r2 bucket dev-url disable ${bucketName}`);
+					expect(std.out).toMatchInlineSnapshot(`
+				"Disabling public access for bucket 'my-bucket'...
+				Public access disabled at 'https://pub-bucket-id-123.r2.dev'."
+			  `);
 				});
 			});
 		});
